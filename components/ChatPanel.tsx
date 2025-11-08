@@ -71,6 +71,7 @@ export default function ChatPanel({ selectedLocation }: ChatPanelProps) {
         body: JSON.stringify({
           messages: [...messages, userMessage],
           location: selectedLocation,
+          screenshot: selectedLocation?.screenshot,
         }),
       });
 
@@ -155,13 +156,20 @@ export default function ChatPanel({ selectedLocation }: ChatPanelProps) {
       {/* Input */}
       <div className="p-4 bg-white border-t border-gray-200">
         {selectedLocation && (
-          <button
-            onClick={insertLocationIntoMessage}
-            className="mb-2 text-xs text-blue-600 hover:text-blue-800 underline"
-          >
-            Ask about selected location ({selectedLocation.lat.toFixed(2)}°,{' '}
-            {selectedLocation.lon.toFixed(2)}°)
-          </button>
+          <div className="mb-2 flex items-center gap-2">
+            <button
+              onClick={insertLocationIntoMessage}
+              className="text-xs text-blue-600 hover:text-blue-800 underline"
+            >
+              Ask about selected location ({selectedLocation.lat.toFixed(2)}°,{' '}
+              {selectedLocation.lon.toFixed(2)}°)
+            </button>
+            {selectedLocation.screenshot && (
+              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                📸 Screenshot ready
+              </span>
+            )}
+          </div>
         )}
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input

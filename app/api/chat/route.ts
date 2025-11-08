@@ -7,7 +7,7 @@ const anthropic = new Anthropic({
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, location } = await request.json();
+    const { messages, location, screenshot } = await request.json();
 
     // Build the system prompt with sailing expertise
     let systemPrompt = `You are an expert sailing weather assistant. You help sailors understand weather conditions, wind patterns, and weather systems.
@@ -29,7 +29,8 @@ When discussing weather:
 Current context from earth.nullschool.net map:
 - The map shows real-time global wind patterns and weather data
 - Wind visualization includes speed (shown by animation intensity and color)
-- Users can see surface-level wind patterns`;
+- Users can see surface-level wind patterns
+- Colors indicate wind speed: darker blue/green = light winds, yellow/orange = moderate, red/purple = strong winds`;
 
     // Add location context if available
     if (location) {
@@ -42,15 +43,45 @@ Please provide specific weather analysis for this location based on the user's q
     }
 
     // Convert messages to Anthropic format
-    const anthropicMessages = messages.map((msg: any) => ({
-      role: msg.role === 'assistant' ? 'assistant' : 'user',
-      content: msg.content,
-    }));
+    const anthropicMessages = messages.map((msg: any, index: number) => {
+      const isLastUserMessage = msg.role === 'user' && index === messages.length - 1;
+
+      // If this is the last user message and we have a screenshot, add it
+      if (isLastUserMessage && screenshot) {
+        return {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'image/png',
+                data: screenshot,
+              },
+            },
+            {
+              type: 'text',
+              text: msg.content,
+            },
+          ],
+        };
+      }
+
+      return {
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content,
+      };
+    });
+
+    // Add vision context to system prompt if screenshot is provided
+    if (screenshot) {
+      systemPrompt += `\n\nYou can now see the actual weather map visualization from earth.nullschool.net. Analyze the visual patterns, colors, and flow directions you see in the image to provide accurate weather interpretation.`;
+    }
 
     // Call Claude API
     const response = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20240620',
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: systemPrompt,
       messages: anthropicMessages,
     });

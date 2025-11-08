@@ -8,6 +8,7 @@ export interface LocationData {
   lat: number;
   lon: number;
   timestamp: string;
+  screenshot?: string; // base64 encoded screenshot
 }
 
 export default function WeatherApp() {
