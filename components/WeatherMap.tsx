@@ -52,7 +52,36 @@ export default function WeatherMap({ onLocationSelect }: WeatherMapProps) {
     }
   };
 
-  const handleCoordinateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const captureScreenshot = async (lat: number, lon: number) => {
+    try {
+      // Call our screenshot API
+      const response = await fetch(`/api/screenshot?lat=${lat}&lon=${lon}`);
+
+      if (!response.ok) {
+        console.error('Screenshot failed:', await response.text());
+        return null;
+      }
+
+      // Convert image to base64
+      const blob = await response.blob();
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          // Remove the data:image/png;base64, prefix
+          const base64Data = base64.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error capturing screenshot:', error);
+      return null;
+    }
+  };
+
+  const handleCoordinateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const lat = parseFloat(formData.get('lat') as string);
@@ -63,11 +92,15 @@ export default function WeatherMap({ onLocationSelect }: WeatherMapProps) {
       const newUrl = `https://earth.nullschool.net/#current/wind/surface/level/orthographic=${lon},${lat},1500`;
       setCurrentUrl(newUrl);
 
-      // Send location to chat
+      // Capture screenshot asynchronously
+      const screenshot = await captureScreenshot(lat, lon);
+
+      // Send location to chat with screenshot
       onLocationSelect({
         lat,
         lon,
         timestamp: new Date().toISOString(),
+        screenshot: screenshot || undefined,
       });
     }
   };
